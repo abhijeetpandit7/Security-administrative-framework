@@ -3,7 +3,8 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox as mess
 import tkinter.simpledialog as tsd
-import cv2, os
+import cv2
+import os
 import csv
 import numpy as np
 from PIL import Image
@@ -18,7 +19,6 @@ import time
 import smtplib
 from email.message import EmailMessage
 import imghdr
-import os
 import csv
 from dotenv import load_dotenv
 
@@ -257,13 +257,20 @@ def TakeImages():
     assure_path_exists("StudentDetails/")
     assure_path_exists("TrainingImage/")
     serial = 0
+    rowUserSerial = 0
     exists = os.path.isfile("StudentDetails\StudentDetails.csv")
     if exists:
         with open("StudentDetails\StudentDetails.csv", "r") as csvFile1:
             reader1 = csv.reader(csvFile1)
-            for l in reader1:
-                serial = serial + 1
-        serial = serial // 2
+            for index, row in enumerate(reader1):
+                try:
+                    rowUserSerial = row[0]
+                except:
+                    pass
+        try:
+            serial = int(rowUserSerial) + 1
+        except:
+            serial = 1
         csvFile1.close()
     else:
         with open("StudentDetails\StudentDetails.csv", "a+") as csvFile1:
@@ -297,7 +304,7 @@ def TakeImages():
                     + "."
                     + str(sampleNum)
                     + ".jpg",
-                    gray[y : y + h, x : x + w],
+                    gray[y: y + h, x: x + w],
                 )
                 # display the frame
                 cv2.imshow("Taking Images", img)
@@ -369,6 +376,116 @@ def getImagesAndLabels(path):
 
 ###########################################################################################
 
+def deRegisterFrame():
+    def updateRegisteredEntries():
+        exists = os.path.isfile("StudentDetails\StudentDetails.csv")
+        if exists:
+            for k in tv.get_children():
+                tv.delete(k)
+            with open("StudentDetails\StudentDetails.csv", 'r') as csvFile1:
+                reader1 = csv.reader(csvFile1)
+                i = 0
+                for lines in reader1:
+                    i = i + 1
+                    if (i > 1):
+                        if (i % 2 != 0):
+                            iidd = str(lines[2]) + '   '
+                            tv.insert('', 0, text=iidd, values=(
+                                str(lines[4]), str(lines[0])))
+            csvFile1.close()
+
+    def deleteRegiteredEntry():
+        selected_item = tv.selection()[0]
+        userName = tv.item(selected_item, "values")[0]
+        userSerial = tv.item(selected_item, "values")[1]
+        if(userSerial and userName):
+            fileName = str(userName+"."+userSerial+".")
+            for root, dirs, files in os.walk("TrainingImage"):
+                for file in files:
+                    if fileName in file:
+                        os.remove(os.path.join(root, file))
+
+            entries = list()
+            with open("StudentDetails\StudentDetails.csv", 'r') as readFile:
+                reader = csv.reader(readFile)
+                for index, row in enumerate(reader):
+                    entries.append(row)
+                    try:
+                        rowUserSerial = row[0]
+                        rowUserName = row[4]
+                        if (rowUserSerial == userSerial) and (rowUserName == userName):
+                            entries.pop(index)
+                            entries.pop(index-1)
+                    except:
+                        pass
+            with open("StudentDetails\StudentDetails.csv", 'w', newline="") as writeFile:
+                writer = csv.writer(writeFile)
+                writer.writerows(entries)
+            updateRegisteredEntries()
+            TrainImages()
+
+    window = tk.Tk()
+    window.geometry("320x640")
+    window.resizable(True, False)
+    window.title("Security Administrative Framework")
+    window.configure(background='#262523')
+
+    frame1 = tk.Frame(window, bg="#161925")
+    frame1.place(relx=0, rely=0.1, relwidth=1, relheight=0.80)
+
+    head1 = tk.Label(
+        frame1,
+        text="                 Registered                  ",
+        fg="black",
+        bg="#BFC0C0",
+        font=('times', 17, ' bold ')
+    )
+    head1.place(x=0, y=0)
+
+    lbl3 = tk.Label(
+        frame1,
+        text="Entries",
+        width=20,
+        fg="white",
+        bg="#161925",
+        height=1,
+        font=('times', 17, ' bold ')
+    )
+    lbl3.place(x=20, y=35)
+
+    ################## TREEVIEW ATTENDANCE TABLE ####################
+
+    tv = ttk.Treeview(frame1, height=15, columns=('id', 'name', 'serial'))
+    tv.column('#0', width=50)
+    tv.column('#1', width=270)
+    tv.column('#2', width=50)
+    tv.grid(row=2, column=2, padx=(0, 0), pady=(80, 0), columnspan=3)
+    tv.heading('#0', text='ID')
+    tv.heading('#1', text='NAME')
+    tv.heading('#2', text='SERIAL')
+
+    ###################### SCROLLBAR ################################
+
+    scroll = ttk.Scrollbar(frame1, orient='vertical', command=tv.yview)
+    scroll.grid(row=2, column=1, padx=(0, 0), pady=(80, 0), sticky='ns')
+    tv.configure(yscrollcommand=scroll.set)
+
+    deRegisterButton = tk.Button(
+        frame1,
+        text="Remove",
+        command=deleteRegiteredEntry,
+        fg="black",
+        bg="#FF595E",
+        width=14,
+        height=1,
+        activebackground="white",
+        font=('times', 15, ' bold ')
+    )
+    deRegisterButton.place(x=20, y=420)
+
+    updateRegisteredEntries()
+
+###########################################################################################
 
 def TrackImages():
     check_haarcascadefile()
@@ -412,7 +529,7 @@ def TrackImages():
         guns = gunCascade.detectMultiScale(gray, 1.4, 5)
         for (x, y, w, h) in faces:
             cv2.rectangle(im, (x, y), (x + w, y + h), (225, 0, 0), 2)
-            serial, conf = recognizer.predict(gray[y : y + h, x : x + w])
+            serial, conf = recognizer.predict(gray[y: y + h, x: x + w])
             if conf < 90:
                 ts = time.time()
                 date = datetime.datetime.fromtimestamp(ts).strftime("%d-%m-%Y")
@@ -747,6 +864,18 @@ trainImg = tk.Button(
     activebackground="white",
     font=("times", 15, " bold "),
 )
+deRegisterButton = tk.Button(
+    frame2,
+    text="De-register",
+    command=deRegisterFrame,
+    fg="black",
+    bg="#a0ced9",
+    width=34,
+    height=1,
+    activebackground="white",
+    font=('times', 15, ' bold ')
+)
+deRegisterButton.place(x=30, y=400)
 trainImg.place(x=250, y=250)
 trackImg = tk.Button(
     frame1,

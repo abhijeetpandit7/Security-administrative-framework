@@ -21,8 +21,10 @@ from email.message import EmailMessage
 import imghdr
 import csv
 from dotenv import load_dotenv
+import serial
 
 load_dotenv()
+arduino = serial.Serial(port='COM5', baudrate=9600, timeout=0)
 
 ############################################# CONSTANTS ################################################
 
@@ -524,6 +526,8 @@ def TrackImages():
         window.destroy()
     while True:
         ret, im = cam.read()
+        arduino_data = arduino.readline()
+        decoded_values = str(arduino_data.decode("utf-8"))
         gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
         faces = faceCascade.detectMultiScale(gray, 1.4, 5)
         guns = gunCascade.detectMultiScale(gray, 1.4, 5)
@@ -564,6 +568,12 @@ def TrackImages():
         cv2.imshow("Real-time monitoring", im)
         if cv2.waitKey(1) == ord("q"):
             break
+        elif "1" in decoded_values:
+            playsound('./alarm.mpeg')
+            unknownTimestamp = datetime.datetime.now().strftime("%d_%m_%Y %H_%M_%S")
+            filename = "UnknownImages/" + unknownTimestamp + ".png"
+            cv2.imwrite(filename, im)
+            sendEmailToAdmin(filename)
     cam.release()
     cv2.destroyAllWindows()
 

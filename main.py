@@ -235,6 +235,31 @@ def sendEmailToAdmin(filename):
     server.send_message(message)
     server.close()
 
+def sendMetalEmailToAdmin(filename):
+    server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
+    server.ehlo()
+    server.login(system_email, system_password)
+
+    tf = open("TrainingImageLabel\email.txt", "r")
+    email = tf.read()
+
+    message = EmailMessage()
+    message["Subject"] = "Metal detected!"
+    message["From"] = system_email
+    message["To"] = email
+    message.set_content("We have detected metal.")
+
+    with open(filename, "rb") as img:
+        image_data = img.read()
+        image_type = imghdr.what(img.name)
+        image_name = img.name
+    message.add_attachment(
+        image_data, maintype="image", subtype=image_type, filename=image_name
+    )
+
+    server.send_message(message)
+    server.close()
+
 ######################################################################################
 
 
@@ -493,6 +518,7 @@ def TrackImages():
     check_haarcascadefile()
     assure_path_exists("Attendance/")
     assure_path_exists("UnknownImages/")
+    assure_path_exists("MetalDetectedImages/")
     assure_path_exists("StudentDetails/")
     msg = ""
     i = 0
@@ -570,10 +596,10 @@ def TrackImages():
             break
         elif "1" in decoded_values:
             playsound('./alarm.mpeg')
-            unknownTimestamp = datetime.datetime.now().strftime("%d_%m_%Y %H_%M_%S")
-            filename = "UnknownImages/" + unknownTimestamp + ".png"
+            metalDetectedTimestamp = datetime.datetime.now().strftime("%d_%m_%Y %H_%M_%S")
+            filename = "MetalDetectedImages/" + metalDetectedTimestamp + ".png"
             cv2.imwrite(filename, im)
-            sendEmailToAdmin(filename)
+            sendMetalEmailToAdmin(filename)
     cam.release()
     cv2.destroyAllWindows()
 

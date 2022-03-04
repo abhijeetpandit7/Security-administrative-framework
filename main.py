@@ -24,7 +24,10 @@ from dotenv import load_dotenv
 import serial
 
 load_dotenv()
-arduino = serial.Serial(port='COM5', baudrate=9600, timeout=0)
+try:
+    arduino = serial.Serial(port='COM5', baudrate=9600, timeout=0)
+except:
+    pass
 
 ############################################# CONSTANTS ################################################
 
@@ -552,8 +555,11 @@ def TrackImages():
         window.destroy()
     while True:
         ret, im = cam.read()
-        arduino_data = arduino.readline()
-        decoded_values = str(arduino_data.decode("utf-8"))
+        try:
+            arduino_data = arduino.readline()
+            decoded_values = str(arduino_data.decode("utf-8"))
+        except:
+            decoded_values = "0"
         gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
         faces = faceCascade.detectMultiScale(gray, 1.4, 5)
         guns = gunCascade.detectMultiScale(gray, 1.4, 5)
@@ -595,7 +601,10 @@ def TrackImages():
         if cv2.waitKey(1) == ord("q"):
             break
         elif "1" in decoded_values:
-            playsound('./alarm.mpeg')
+            # playsound('./alarm.mpeg')
+            mixer.init()
+            mixer.music.load("D:/Clg/sem 7/project/alarm.mpeg")
+            mixer.music.play()
             metalDetectedTimestamp = datetime.datetime.now().strftime("%d_%m_%Y %H_%M_%S")
             filename = "MetalDetectedImages/" + metalDetectedTimestamp + ".png"
             cv2.imwrite(filename, im)
